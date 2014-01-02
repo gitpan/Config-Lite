@@ -1,0 +1,5 @@
+Revision history for Perl extension Config::Lite.
+
+0.01  Thu Jan  1 11:33:16 2014
+	- original version; created by h2xs 1.23 with options -AX -n Config::Lite
+
