@@ -7,27 +7,42 @@ use Fcntl qw/:flock/;
 require Exporter;
 
 our @ISA = qw(Exporter);
-our @EXPORT_OK = qw(load_config);
+our @EXPORT_OK = qw(load_config set_config_separator);
 our @EXPORT = qw();
-our $VERSION = '0.01';
+our $VERSION = '0.02';
+
+our %separator;
+$separator{'kv'} = "=";
+$separator{'comment'} = "#";
+$separator{'line'} = "\n";
+
+sub set_config_separator
+{
+	my $kind = shift;
+	my $str = shift;
+	$separator{$kind} = $str;
+	return 1;
+}
 
 sub load_config
 {
 	my $config_filename = shift;
 	open my $fh,"<", $config_filename or return "no config file found";
 	flock $fh, LOCK_SH;
-	my $config_content = '';
-	while(<$fh>)
-	{
-		next unless $_ =~ /=/;
-		next if $_ =~ /^#/;
-		$config_content .= $_;
-	}
+	my $config_string = do { local $/ ; <$fh> };
 	flock $fh, LOCK_UN;
 	close $fh;
-	my @config_hash = $config_content =~ /(.+?)=(.+?)$/smg;
-	grep {s/^\s+//; s/\s+$//;} @config_hash;
-	return @config_hash;
+
+	my @config_array = split /$separator{'line'}/, $config_string;
+	my %config_hash;
+	foreach ( @config_array )
+	{
+		next unless $_ =~ /$separator{'kv'}/;
+		next if $_ =~ /^$separator{'comment'}/;
+		my ($k, $v) = $_ =~ /\s*(.+?)$separator{'kv'}(.+?)\s*$/;
+		$config_hash{$k} = $v;
+	}
+	return %config_hash;
 }
 
 
@@ -71,8 +86,33 @@ You got this:
 =head1 DESCRIPTION
 
 Simple config load module.
-Code is clean and no dependence, so the module is easy to use and install.  
+
+Clean and no dependence. 
+
+Easy to use and install.  
+
 I<flock> inside.
+
+
+=head1 METHODS
+
+=head2 set_config_separator($type, $string)
+
+Optional.
+
+User set separator. Always return 1.
+
+use set_config_separator("kv", "your_separator") set separator between key and value.
+
+use set_config_separator("line", "your_separator") set separator between lines.
+
+use set_config_separator("comment", "your_separator") set separator before a comment line.
+
+=head2 load_config($filename)
+
+Main method.
+
+Read config file into a hash then return it.
 
 
 =head1 EXPORT
